@@ -1,0 +1,12 @@
+{
+  "name": "git-workflow",
+  "version": "1.0.0",
+  "description": "Git workflow - commit validation, conventional commits, PR creation, releases, code review",
+  "author": {
+    "name": "Matt Hesketh",
+    "email": "matt@heskethwebdesign.co.uk"
+  },
+  "repository": "https://github.com/wrxck/git-workflow",
+  "license": "MIT",
+  "keywords": ["git", "workflow", "conventional-commits", "pull-request", "release", "code-review"]
+}
