@@ -1,5 +1,7 @@
 # git-workflow
 
+[![CI](https://github.com/wrxck/git-workflow/actions/workflows/ci.yml/badge.svg)](https://github.com/wrxck/git-workflow/actions/workflows/ci.yml)
+
 Git workflow enforcement and commands for Claude Code sessions.
 
 ## What it enforces (via PreToolUse Bash hooks)
