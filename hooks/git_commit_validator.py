@@ -9,6 +9,7 @@ Claude Code hook to validate git commit messages:
 
 import json
 import re
+import shlex
 import sys
 
 # british spelling replacements (subset focused on common commit message words)
@@ -109,6 +110,98 @@ def check_commit_message(message: str) -> list[str]:
     return issues
 
 
+def _strip_heredocs(command):
+    bodies = []
+    remaining = []
+    lines = command.split('\n')
+    i = 0
+    hd_re = re.compile(r"<<-?\s*(?P<q>['\"]?)(?P<word>[A-Za-z_][A-Za-z0-9_]*)(?P=q)")
+    while i < len(lines):
+        line = lines[i]
+        matches = list(hd_re.finditer(line))
+        if not matches:
+            remaining.append(line)
+            i += 1
+            continue
+        header = line
+        for m in matches:
+            header = header.replace(m.group(0), '')
+        remaining.append(header)
+        pending = [(m.group('word'), '<<-' in m.group(0)) for m in matches]
+        i += 1
+        for word, dash in pending:
+            body = []
+            closed = False
+            while i < len(lines):
+                cand = lines[i]
+                stripped = cand.lstrip('\t') if dash else cand
+                if stripped.rstrip() == word or stripped == word:
+                    i += 1
+                    closed = True
+                    break
+                body.append(cand)
+                i += 1
+            if not closed:
+                return command, []
+            bodies.append('\n'.join(body))
+    return '\n'.join(remaining), bodies
+
+
+def _extract_message(command):
+    """return commit message body (possibly empty) and whether -F was used."""
+    try:
+        cleaned, bodies = _strip_heredocs(command)
+        tokens = shlex.split(cleaned, posix=True)
+    except ValueError:
+        return '', False
+
+    # find first `git` then the `commit` subcommand
+    i = 0
+    while i < len(tokens) and tokens[i] != 'git':
+        i += 1
+    if i >= len(tokens):
+        return '', False
+    j = i + 1
+    while j < len(tokens) and tokens[j].startswith('-'):
+        if tokens[j] in {'-C', '-c'} and j + 1 < len(tokens):
+            j += 2
+            continue
+        j += 1
+    if j >= len(tokens) or tokens[j] != 'commit':
+        return '', False
+
+    args = tokens[j + 1:]
+    messages = []
+    uses_file = False
+    k = 0
+    while k < len(args):
+        a = args[k]
+        if a in {'-m', '--message'} and k + 1 < len(args):
+            messages.append(args[k + 1])
+            k += 2
+            continue
+        if a.startswith('--message='):
+            messages.append(a.split('=', 1)[1])
+            k += 1
+            continue
+        if a.startswith('-m') and len(a) > 2:
+            messages.append(a[2:])
+            k += 1
+            continue
+        if a in {'-F', '--file'}:
+            uses_file = True
+            k += 2
+            continue
+        if a.startswith('--file='):
+            uses_file = True
+            k += 1
+            continue
+        k += 1
+
+    combined = '\n\n'.join(messages + bodies)
+    return combined, uses_file
+
+
 def main():
     try:
         input_data = json.load(sys.stdin)
@@ -118,21 +211,14 @@ def main():
     tool_input = input_data.get('tool_input', {})
     command = tool_input.get('command', '')
 
-    # only check git commit commands
     if 'git commit' not in command:
         sys.exit(0)
 
-    # extract commit message from -m flag
-    message_match = re.search(r'-m\s+[\'"](.+?)[\'"]', command, re.DOTALL)
-    if not message_match:
-        # check for heredoc style
-        heredoc_match = re.search(r'-m\s+"\$\(cat <<[\'"]?EOF[\'"]?\s*\n(.+?)\nEOF', command, re.DOTALL)
-        if heredoc_match:
-            message = heredoc_match.group(1)
-        else:
-            sys.exit(0)
-    else:
-        message = message_match.group(1)
+    message, uses_file = _extract_message(command)
+    if uses_file and not message:
+        sys.exit(0)
+    if not message:
+        sys.exit(0)
 
     issues = check_commit_message(message)
 
