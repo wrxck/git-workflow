@@ -1,3 +1,7 @@
+---
+description: Comprehensive code review that checks security, performance, and correctness in parallel, then produces a unified report ranked by severity
+---
+
 # /review
 
 Comprehensive code review that checks security, performance, and correctness in parallel, then produces a unified report ranked by severity.
