@@ -1,3 +1,7 @@
+---
+description: Create a commit on the current feature branch
+---
+
 # /commit -- Create a Git Commit
 
 Create a commit on the current feature branch. Follow these rules exactly:

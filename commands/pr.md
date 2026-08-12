@@ -1,3 +1,7 @@
+---
+description: Create a PR from the current feature branch to `develop` for Matt to review
+---
+
 # /pr -- Create a Pull Request
 
 Create a PR from the current feature branch to `develop` for Matt to review.

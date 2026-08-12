@@ -1,3 +1,7 @@
+---
+description: This is a guided release process
+---
+
 # /release -- Prepare a Release
 
 This is a guided release process. It requires Matt's explicit approval at every step.
